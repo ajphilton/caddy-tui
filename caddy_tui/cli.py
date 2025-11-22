@@ -12,6 +12,7 @@ from .importer import import_caddyfile
 from .exporter import generate_caddyfile
 from .caddy_integration import validate_config, reload_caddy
 from .tui_app import run_tui
+from .versioning import collect_version_info, store_current_version
 
 
 def _echo_json(payload: dict) -> None:
@@ -31,6 +32,7 @@ def init(db_path: Path | None) -> None:
     ensure_app_dir()
     target = db_path or DB_PATH
     init_db(target)
+    store_current_version(db_path=target)
     _echo_json({"status": "ok", "db_path": str(target)})
 
 
@@ -39,6 +41,7 @@ def init(db_path: Path | None) -> None:
 def import_(caddyfile: Path | None) -> None:
     """Import an existing Caddyfile."""
     summary = import_caddyfile(caddyfile)
+    store_current_version()
     _echo_json(
         {
             "status": "ok",
@@ -63,6 +66,7 @@ def apply(output: Path | None, fmt: str) -> None:
         target.write_text("{}\n")
     validate_config(target, fmt)
     reload_caddy(target, fmt)
+    store_current_version()
     _echo_json({"status": "ok", "format": fmt, "output": str(target)})
 
 
@@ -83,4 +87,20 @@ def validate(fmt: str) -> None:
         target = GENERATED_JSON
         target.write_text("{}\n")
     validate_config(target, fmt)
+    store_current_version()
     _echo_json({"status": "ok", "format": fmt, "output": str(target)})
+
+
+@main.command("version")
+def version_cmd() -> None:
+    """Report current and latest known versions."""
+    info = collect_version_info()
+    _echo_json(
+        {
+            "status": "ok",
+            "current_version": info.current,
+            "latest_version": info.latest,
+            "update_available": info.update_available,
+            "source": info.source,
+        }
+    )

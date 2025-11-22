@@ -9,6 +9,7 @@ caddy_tui/exporter.py
 caddy_tui/importer.py
 caddy_tui/models.py
 caddy_tui/tui_app.py
+caddy_tui/versioning.py
 caddy_tui.egg-info/PKG-INFO
 caddy_tui.egg-info/SOURCES.txt
 caddy_tui.egg-info/dependency_links.txt
@@ -18,3 +19,4 @@ caddy_tui.egg-info/top_level.txt
 tests/test_db.py
 tests/test_exporter.py
 tests/test_importer.py
+tests/test_versioning.py
