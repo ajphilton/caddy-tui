@@ -14,6 +14,8 @@ from .models import Site
 class SiteList(ListView):
     def __init__(self) -> None:
         super().__init__()
+
+    def on_mount(self) -> None:
         self.refresh_items()
 
     def refresh_items(self) -> None:
