@@ -1,0 +1,30 @@
+Metadata-Version: 2.4
+Name: caddy-tui
+Version: 0.1.0
+Summary: TUI + CLI tool to manage Caddy configs via SQLite
+Author-email: Alex Hilton <alex@skystamper.com>
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.1
+Requires-Dist: textual>=0.49
+Requires-Dist: SQLAlchemy>=2.0
+Requires-Dist: rich>=13.7
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-mock; extra == "test"
+
+# caddy-tui
+
+A terminal UI + CLI helper that keeps Caddy configuration in SQLite, lets you edit via a Textual interface, and safely regenerates validated configs before reloading Caddy.
+
+## Quick start
+
+```bash
+pip install -e .
+caddy-tui init
+caddy-tui import --caddyfile /etc/caddy/Caddyfile
+caddy-tui apply
+caddy-tui tui
+```
+
+The CLI subcommands are designed for both humans and automation (including Copilot agents) so every workflow is scriptable.

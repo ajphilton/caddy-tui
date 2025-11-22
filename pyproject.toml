@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "caddy-tui"
+version = "0.1.0"
+description = "TUI + CLI tool to manage Caddy configs via SQLite"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Alex Hilton", email = "alex@skystamper.com" }
+]
+dependencies = [
+    "click>=8.1",
+    "textual>=0.49",
+    "SQLAlchemy>=2.0",
+    "rich>=13.7"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock"
+]
+
+[project.scripts]
+"caddy-tui" = "caddy_tui.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["caddy_tui*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-ra"
