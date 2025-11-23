@@ -1,2 +1,3 @@
 [console_scripts]
 caddy-tui = caddy_tui.cli:main
+caddy-tui-helper = caddy_tui.privileged_helper:main

@@ -1,8 +1,8 @@
 click>=8.1
-textual>=0.49
 SQLAlchemy>=2.0
 rich>=13.7
 packaging>=23.2
+colorama>=0.4
 
 [test]
 pytest

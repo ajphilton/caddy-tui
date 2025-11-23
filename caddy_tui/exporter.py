@@ -2,30 +2,77 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
 
 from sqlalchemy import select
 
 from . import models
 from .db import session_scope
+from .helper_runner import install_generated_file
+from .config import ensure_cache_dir
+from .importer import DEFAULT_CONFIG_NAME
 
 
 class ExportError(RuntimeError):
     pass
 
 
-def _build_simple_caddyfile(sites: Iterable[models.Site]) -> str:
-    blocks: list[str] = []
-    for site in sites:
-        status = "# disabled\n" if not site.enabled else ""
-        body = ["    respond \"caddy-tui placeholder\""]
-        blocks.append(f"{status}{site.address} {{\n" + "\n".join(body) + "\n}\n")
-    return "\n".join(blocks)
+def render_caddyfile_text(
+    db_path: Path | None = None,
+    *,
+    snapshot_kind: models.SnapshotKind = models.SNAPSHOT_KIND_CADDY_TUI,
+) -> str:
+    with session_scope(db_path=db_path) as session:
+        config = session.scalar(select(models.Config).where(models.Config.name == DEFAULT_CONFIG_NAME))
+        if config is None:
+            return ""
+        snapshot = session.scalar(
+            select(models.ConfigSnapshot)
+                .where(
+                    models.ConfigSnapshot.config_id == config.id,
+                    models.ConfigSnapshot.source_kind == snapshot_kind,
+                )
+                .limit(1)
+        )
+        if snapshot is None:
+            return ""
+        chunks: list[str] = []
+        for block in sorted(snapshot.server_blocks, key=lambda b: b.block_index):
+            if block.raw_prelude:
+                chunks.append(block.raw_prelude)
+            fragments = sorted(block.fragments, key=lambda f: f.fragment_index)
+            if fragments:
+                chunks.extend(fragment.content for fragment in fragments)
+            else:
+                chunks.append(_synthesise_block(block))
+            if block.raw_postlude:
+                chunks.append(block.raw_postlude)
+        return "".join(chunks)
 
 
-def generate_caddyfile(target: Path) -> Path:
-    with session_scope() as session:
-        sites = session.scalars(select(models.Site)).all()
-        data = _build_simple_caddyfile(sites)
+def _synthesise_block(block: models.ServerBlock) -> str:
+    labels = ", ".join(site.raw_label for site in sorted(block.sites, key=lambda s: s.label_index))
+    header = f"{labels} {{\n" if labels else "{\n"
+    body = "    respond \"caddy-tui placeholder\"\n"
+    return header + body + "}\n"
+
+
+def generate_caddyfile(
+    target: Path,
+    db_path: Path | None = None,
+    *,
+    snapshot_kind: models.SnapshotKind = models.SNAPSHOT_KIND_CADDY_TUI,
+) -> Path:
+    data = render_caddyfile_text(db_path=db_path, snapshot_kind=snapshot_kind)
+    try:
         target.write_text(data)
-        return target
+    except PermissionError:
+        cache = ensure_cache_dir() / "generated"
+        cache.mkdir(parents=True, exist_ok=True)
+        staged = cache / target.name
+        staged.write_text(data)
+        success, command, error = install_generated_file(staged, target)
+        if not success:
+            detail = error or "Helper install failed"
+            hint = f"Run: {command}" if command else "Run helper install manually"
+            raise PermissionError(f"Unable to write {target}: {detail}. {hint}")
+    return target

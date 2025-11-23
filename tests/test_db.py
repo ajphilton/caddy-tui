@@ -10,4 +10,6 @@ def test_init_db(tmp_path: Path):
     db.init_db(db_path)
     engine = db.get_engine(db_path)
     insp = inspect(engine)
-    assert "sites" in insp.get_table_names()
+    tables = insp.get_table_names()
+    assert "configs" in tables
+    assert "server_blocks" in tables

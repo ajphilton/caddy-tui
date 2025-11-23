@@ -1,18 +1,160 @@
 # caddy-tui
 
-A terminal UI + CLI helper that keeps Caddy configuration in SQLite, lets you edit via a Textual interface, and safely regenerates validated configs before reloading Caddy.
+An interactive terminal UI plus CLI toolkit (built with Colorama + Rich) that keeps Caddy configuration in SQLite (`~/.caddy-tui/config.db`), lets you inspect/import data, offers inline block editing, and safely regenerates validated configs before reloading the Caddy service.
+
+## Project structure
+
+```
+caddy-tui/
+├── caddy_tui/
+│   ├── cli.py                # Click-based CLI skeleton & entry points
+│   ├── tui_app.py            # Rich/Colorama TUI loop
+│   ├── db.py                 # Schema builder + session helpers
+│   ├── importer.py           # Caddyfile → snapshot pipeline
+│   ├── exporter.py           # Snapshot → Caddyfile renderer
+│   ├── block_editor.py       # CRUD helpers for caddy-tui snapshot blocks
+│   ├── drift.py, status.py   # Diff + reporting utilities
+│   └── ...                   # Additional helpers (config, models, etc.)
+├── pyproject.toml            # PyPI metadata + console scripts
+├── MANIFEST.in               # Source distribution manifest
+├── README.md                 # Usage + architecture guide
+├── CHANGELOG.md              # Release notes
+└── LICENSE                   # MIT terms
+```
+
+The modules are intentionally decoupled so you can script against the importer/exporter hooks or database builder without invoking the CLI.
 
 ## Quick start
 
 ```bash
 pip install -e .
-caddy-tui init
-caddy-tui import --caddyfile /etc/caddy/Caddyfile
-caddy-tui apply
-caddy-tui version
+caddy-tui init                # DB schema builder
+sudo caddy-tui import --caddyfile /etc/caddy/Caddyfile
+caddy-tui tui                 # Interactive block editor + drift monitor
+```
+
+The CLI prints JSON so it can slot straight into scripts, CI jobs, or other automation.
+
+## Core commands
+
+| Command | Purpose |
+| --- | --- |
+| `caddy-tui init` | Create the SQLite schema at `~/.caddy-tui/config.db`. |
+| `caddy-tui import --caddyfile PATH` | Parse an existing Caddyfile and load it into the DB. Use `sudo` when PATH lives under `/etc/caddy`. |
+| `caddy-tui list-sites` / `add-site` / `remove-site` | Manage site definitions directly from the CLI. |
+| `caddy-tui apply` | Regenerate a Caddyfile from the DB, validate it, and reload Caddy via `systemctl reload caddy` (run with sudo). |
+| `caddy-tui refresh-live` | Force a fresh snapshot of the live Caddyfile via the configured helper (same action as the TUI “Refresh live snapshot” option). |
+| `caddy-tui status [--caddyfile PATH] [--diff] [--refresh-live]` | Compare the DB-rendered config with the specified Caddyfile (defaults to the last imported path). Pass `--refresh-live` to mirror the live file just before comparing. Exits with code 1 when drift is detected. |
+| `caddy-tui tui` | Launch the interactive scrolling menu for importing files, editing caddy-tui blocks (add/edit/delete), refreshing the live snapshot, reviewing drift, and checking Caddy service health. |
+
+### CLI skeleton & starter commands
+
+- `caddy_tui/cli.py` defines a single Click group (`main`) plus entry points for init/import/apply/status/refresh-live/tui/validate/version. Each command simply marshals arguments then calls the relevant helper module, so you can copy the file as a starter CLI scaffold for other admin scripts.
+- Every command emits JSON so shell automation stays predictable—check the `status` field and inspect payload keys for details.
+- New commands should live in dedicated helper modules (example: `drift.compare_caddyfile`) and then be wired into the CLI via a short `@main.command()` block.
+
+### Status command
+
+Use `caddy-tui status --diff` (typically with sudo) to verify the live `/etc/caddy/Caddyfile` still matches the SQLite data. The tool prints hashes, whether everything is in sync, and a truncated unified diff when requested. This is handy in CI or cron to catch manual edits. When `--refresh-live` is set the helper mirrors `/etc/caddy/Caddyfile`, computes the comparisons, and immediately purges the live snapshot from SQLite so sensitive data is not stored after the check completes.
+
+### Importing system Caddyfiles
+
+Most distro packages restrict `/etc/caddy/Caddyfile` to root. Keep the TUI unprivileged and run imports as needed via:
+
+```bash
+sudo /home/alexander_skystamper_com/projects/caddy-tui/.venv/bin/caddy-tui import --caddyfile /etc/caddy/Caddyfile
+```
+
+The database directory honours `SUDO_USER`, so the sudo-run import updates the same `~/.caddy-tui/config.db` that the TUI uses.
+
+#### Privileged helper (optional)
+
+If you prefer to grant finely scoped permissions instead of full `sudo caddy-tui`, install the accompanying helper entry point:
+
+```
+sudo visudo -f /etc/sudoers.d/caddy-tui
+# Allow your user to run the helper without a password
+alexander  ALL=(ALL) NOPASSWD: /usr/local/bin/caddy-tui-helper
+```
+
+`caddy-tui-helper` exposes mirror/install/reload plus two extra commands: `status` (wraps `systemctl is-active caddy` by default) and `restart` (wraps `systemctl restart caddy`). When the TUI hits a permission error it prints the exact helper command (e.g. `sudo caddy-tui-helper mirror --source /etc/caddy/Caddyfile ...`) so you can re-run it immediately or let sudoers execute it without a prompt.
+
+The helper runner resolves the executable to an absolute path before invoking sudo, so as long as `which caddy-tui-helper` works in your shell you do not need to export `CADDY_TUI_HELPER_BIN`. Just copy that `which` output into the sudoers entry (`alexander ALL=(ALL) NOPASSWD: /home/.../.venv/bin/caddy-tui-helper`) so sudo can locate the same binary.
+
+#### Admin API probe
+
+Set `CADDY_TUI_ADMIN_ENDPOINT` (defaults to `http://127.0.0.1:2019/config`) if your Caddy admin API listens elsewhere. The TUI/CLI will fetch live status from this endpoint on every refresh, report whether the service is up, and (when the endpoint returns `text/caddyfile`) mirror the running config straight into the short-lived `caddy_live` snapshot before diffing. The snapshot is purged immediately after comparisons so sensitive live data never lingers in SQLite.
+
+## Interactive menu overview
+
+`caddy-tui tui` prints a repeating block in this order:
+
+1. Result of the previous selection (e.g. import success, drift diff panel).
+2. A Rich table that captures database readiness, stored block count, last import path, drift summary for every snapshot source (caddy-tui, Caddyfile, live helper), and a color-coded line for the Caddy service state (green when live+in-sync, orange when live but drifting, red when down, yellow when unknown).
+3. A context-aware menu. Options currently include:
+    - `f` – Write the privileged Caddyfile back into `caddy-tui` (helper-assisted import so sudo can mirror `/etc/caddy/Caddyfile`).
+    - `t` – Write the current `caddy-tui` snapshot over the system Caddyfile (helper-assisted install when write permissions are missing).
+    - `r` – Refresh the live snapshot (polls the Caddy admin API for content first, falling back to the helper mirror only when the API is unavailable).
+    - `b` – Show the block contents for each snapshot side-by-side (caddy-tui, Caddyfile, and live) in a dedicated table with wrapped text so you can visually compare directives.
+    - `n` / `e` / `x` – Add, edit, or delete blocks inside the caddy-tui snapshot. The TUI opens your `$EDITOR` (or nano/vi fallback), validates the single-block snippet, and persists it back to SQLite so `caddy-tui tui` is the one-stop shop for CRUD.
+    - `c` – Reload Caddy through the helper and automatically queue a live snapshot refresh afterwards (shown when the helper reports Caddy is live).
+    - `s` – Restart Caddy through the helper when the status probe reports the service is down.
+    - `d` – Show the unified diff between the DB-rendered config and `/etc/caddy/Caddyfile` (available once an import path exists). The diff is shown inside a Rich panel and can be copied directly from the terminal scrollback.
+    - `q` – Quit the session.
+
+Every action prints the exact helper command when elevated access is required, so you can copy/paste or add it to sudoers immediately.
+
+## Database schema builder
+
+`caddy-tui init` (or `python -m caddy_tui.db`) runs `caddy_tui.db.init_db`, which:
+
+1. Ensures `~/.caddy-tui/` exists (or honours `--db PATH`).
+2. Applies the SQLAlchemy schema declared in `caddy_tui/models.py`.
+3. Seeds baseline `Config` + snapshot rows so importer/exporter hooks always have a target.
+
+The command is idempotent, so you can re-run it whenever you ship a new version or want to bootstrap a fresh environment.
+
+## Import/export hooks
+
+- `caddy_tui.importer.import_caddyfile` mirrors an existing Caddyfile into SQLite. Pass `target_snapshot` (defaults to `caddyfile`) and `mirror_to` to control where parsed blocks land, or pass `helper_interactive=True` to log the helper command when elevated access is required.
+- `caddy_tui.exporter.generate_caddyfile` renders the `caddy-tui` snapshot back to a canonical Caddyfile and calls `caddy adapt` as needed. The helper cooperates with `drift.compare_caddyfile` so diffing against arbitrary files stays consistent.
+- `caddy_tui.block_editor` exposes `load_caddy_tui_blocks`, `save_caddy_tui_blocks`, and `parse_single_block` for fine-grained CRUD that matches what the TUI uses.
+
+Integrate those helpers directly from Python (no Click dependency) whenever you need to script imports/exports outside of the bundled CLI.
+
+## Example workflow
+
+1. Initialise the DB: `caddy-tui init`.
+2. Import the live config: `sudo caddy-tui import --caddyfile /etc/caddy/Caddyfile`.
+3. Launch `caddy-tui tui`, edit sites, and review status messages (use `r` whenever you need a fresh live snapshot).
+4. Apply and reload: `sudo caddy-tui apply` (the CLI auto-queues a live snapshot refresh afterward, or run `caddy-tui refresh-live` to grab a short-lived snapshot of `/etc/caddy/Caddyfile` that is purged once the comparison completes).
+5. Keep an eye on drift: `sudo caddy-tui status --diff --refresh-live` in CI or a nightly cron.
+
+## How to run locally
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[test]
+pytest
 caddy-tui tui
 ```
 
-The CLI subcommands are designed for both humans and automation (including Copilot agents) so every workflow is scriptable.
+Run privileged steps (import/apply/status) with sudo, but keep the interactive menu under your normal user account.
 
-`caddy-tui version` returns JSON describing the current package version, the latest release detected on GitHub, and whether an update is available. See `CHANGELOG.md` for a summary of notable releases.
+## Publishing to PyPI
+
+1. Update `CHANGELOG.md`, `README.md`, and bump the version in `pyproject.toml`.
+2. Build artifacts using the bundled metadata (the manifest already ships README + license):
+
+    ```bash
+    python -m build
+    ```
+
+3. Upload via [Twine](https://twine.readthedocs.io/):
+
+    ```bash
+    twine upload dist/*
+    ```
+
+The published wheel exposes the `caddy-tui` and `caddy-tui-helper` entry points, includes the CLI skeleton plus all starter modules, and makes the database builder/import-export hooks available for downstream automation.
