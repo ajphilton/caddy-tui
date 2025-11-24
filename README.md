@@ -33,6 +33,22 @@ sudo caddy-tui import --caddyfile /etc/caddy/Caddyfile
 caddy-tui tui                 # Interactive block editor + drift monitor
 ```
 
+### Install from PyPI
+
+You can install the published package directly (recommended inside a virtualenv):
+
+```bash
+pip install --upgrade caddy-tui
+```
+
+Need a globally available CLI without touching the system Python? Use [pipx](https://pypa.github.io/pipx/):
+
+```bash
+pipx install caddy-tui
+```
+
+This installs both `caddy-tui` and the optional `caddy-tui-helper` command. If you want the helper to run via sudo without a password, follow the “Privileged helper” section below to add it to `/etc/sudoers.d/caddy-tui`.
+
 The CLI prints JSON so it can slot straight into scripts, CI jobs, or other automation.
 
 ## Core commands
@@ -100,6 +116,7 @@ Set `CADDY_TUI_ADMIN_ENDPOINT` (defaults to `http://127.0.0.1:2019/config`) if y
     - `c` – Reload Caddy through the helper and automatically queue a live snapshot refresh afterwards (shown when the helper reports Caddy is live).
     - `s` – Restart Caddy through the helper when the status probe reports the service is down.
     - `d` – Show the unified diff between the DB-rendered config and `/etc/caddy/Caddyfile` (available once an import path exists). The diff is shown inside a Rich panel and can be copied directly from the terminal scrollback.
+    - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions plus the `pip install --upgrade caddy-tui` command.
     - `q` – Quit the session.
 
 Every action prints the exact helper command when elevated access is required, so you can copy/paste or add it to sudoers immediately.

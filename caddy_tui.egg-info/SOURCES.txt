@@ -1,7 +1,12 @@
+CHANGELOG.md
+LICENSE
+MANIFEST.in
 README.md
 pyproject.toml
 caddy_tui/__init__.py
+caddy_tui/block_editor.py
 caddy_tui/caddy_integration.py
+caddy_tui/caddyfile_parser.py
 caddy_tui/cli.py
 caddy_tui/config.py
 caddy_tui/db.py
@@ -9,8 +14,12 @@ caddy_tui/drift.py
 caddy_tui/exporter.py
 caddy_tui/helper_runner.py
 caddy_tui/importer.py
+caddy_tui/json_normalizer.py
+caddy_tui/live_api.py
+caddy_tui/live_renderer.py
 caddy_tui/models.py
 caddy_tui/privileged_helper.py
+caddy_tui/snapshots.py
 caddy_tui/status.py
 caddy_tui/tui_app.py
 caddy_tui/versioning.py
@@ -26,5 +35,7 @@ tests/test_drift.py
 tests/test_exporter.py
 tests/test_helper_runner.py
 tests/test_importer.py
+tests/test_live_api.py
+tests/test_snapshots.py
 tests/test_status.py
 tests/test_versioning.py

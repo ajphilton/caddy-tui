@@ -7,6 +7,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
@@ -27,6 +28,7 @@ from .importer import CaddyfilePermissionError, import_caddyfile
 from .models import SNAPSHOT_KIND_CADDYFILE, SNAPSHOT_KIND_CADDY_LIVE, SNAPSHOT_KIND_CADDY_TUI
 from .snapshots import SNAPSHOT_LABELS, SnapshotBlockText, SnapshotComparison, load_snapshot_block_texts
 from .status import AppStatus, ServiceStatus, SnapshotInfo, collect_app_status, refresh_live_snapshot
+from .versioning import VersionInfo, collect_version_info
 
 
 @dataclass(slots=True)
@@ -47,6 +49,8 @@ class TerminalMenuApp:
         self.running = True
         self._refresh_live_next = True
         self._latest_status: AppStatus | None = None
+        self._version_info: VersionInfo | None = None
+        self._version_last_attempt: float | None = None
 
     def run(self) -> None:
         """Enter the interactive loop."""
@@ -58,6 +62,7 @@ class TerminalMenuApp:
                 )
                 self._refresh_live_next = False
                 self._latest_status = status
+                self._get_version_info()
                 options = self._build_menu(status)
                 self._render_cycle(status, options)
                 choice = input(f"{Fore.CYAN}Select option{Style.RESET_ALL}: ").strip().lower()
@@ -96,6 +101,7 @@ class TerminalMenuApp:
         table.add_column("Value")
         table.add_row("DB path", str(status.db_path))
         table.add_row("DB ready", "yes" if status.db_ready else "no")
+        table.add_row("Version", self._version_status_text())
         table.add_row("Stored blocks", str(status.block_count))
         if status.last_import_path:
             when = status.last_import_time or "time unknown"
@@ -161,6 +167,9 @@ class TerminalMenuApp:
             MenuOption("r", "Refresh live snapshot", self._refresh_live_snapshot),
             MenuOption("b", "Show snapshot blocks", self._show_snapshot_blocks),
         ]
+        version_info = self._version_info
+        if version_info and version_info.update_available and version_info.latest:
+            options.append(MenuOption("u", f"Update available → {version_info.latest}", self._show_update_instructions))
         options.append(MenuOption("n", "Add caddy-tui block", self._add_caddy_tui_block))
         options.append(MenuOption("e", "Edit caddy-tui block", self._edit_caddy_tui_block))
         options.append(MenuOption("x", "Delete caddy-tui block", self._delete_caddy_tui_block))
@@ -250,6 +259,22 @@ class TerminalMenuApp:
         self.running = False
         self._set_message("Goodbye!", style="green")
 
+    def _show_update_instructions(self) -> None:
+        info = self._get_version_info(force=True)
+        if info is None:
+            self._set_message("Unable to contact GitHub for version info. Try again later.", style="red")
+            return
+        if not info.update_available or not info.latest:
+            self._set_message(f"Already running the latest version ({info.current}).", style="green")
+            return
+        install_cmd = "pip install --upgrade caddy-tui"
+        panel = Panel(
+            f"Current version: {info.current}\nLatest release: {info.latest}\n\nUpgrade with:\n  {install_cmd}",
+            title="Update available",
+            border_style="yellow",
+        )
+        self._set_renderable(panel)
+
     # Output helpers
 
     def _set_message(self, message: str, *, style: str | None = None, persist: bool = True) -> None:
@@ -276,6 +301,14 @@ class TerminalMenuApp:
             suffix = f"{mismatch} block{'s' if mismatch != 1 else ''} differ"
             return f"[red]different[/red] ({suffix})"
         return "[yellow]missing[/yellow]"
+
+    def _version_status_text(self) -> str:
+        info = self._version_info
+        if info is None:
+            return "checking…"
+        if info.update_available and info.latest:
+            return f"[red]{info.current}[/red] → [yellow]{info.latest}[/yellow] (press 'u')"
+        return f"[green]{info.current}[/green]"
 
     def _service_status_cell(self, status: AppStatus) -> Text:
         service = status.service_status
@@ -363,6 +396,23 @@ class TerminalMenuApp:
         if service.state != "live":
             return "yellow"
         return "green" if not self._has_disagreement(status) else "orange1"
+
+    def _get_version_info(self, *, force: bool = False) -> VersionInfo | None:
+        if self._version_info is not None and not force:
+            return self._version_info
+        now = time.monotonic()
+        if not force and self._version_last_attempt and (now - self._version_last_attempt) < 300:
+            return self._version_info
+        return self._refresh_version_info()
+
+    def _refresh_version_info(self) -> VersionInfo | None:
+        self._version_last_attempt = time.monotonic()
+        try:
+            info = collect_version_info()
+        except Exception:
+            return None
+        self._version_info = info
+        return info
 
     # Live refresh helpers
 

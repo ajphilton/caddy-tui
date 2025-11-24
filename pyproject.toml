@@ -9,7 +9,7 @@ description = "TUI + CLI tool to manage Caddy configs via SQLite"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "Alex Hilton", email = "alex@skystamper.com" }
+    { name = "Alexander Hilton", email = "alexander@skystamper.com" }
 ]
 license = { file = "LICENSE" }
 keywords = ["caddy", "tui", "cli", "sqlite", "devops", "configuration"]

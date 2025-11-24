@@ -7,3 +7,5 @@ __pycache__/
 .venv
 .mypy_cache/
 pytest_cache/
+env/.env.pypi
+env/.env.pypi.enc
