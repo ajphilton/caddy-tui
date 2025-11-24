@@ -116,7 +116,7 @@ Set `CADDY_TUI_ADMIN_ENDPOINT` (defaults to `http://127.0.0.1:2019/config`) if y
     - `c` – Reload Caddy through the helper and automatically queue a live snapshot refresh afterwards (shown when the helper reports Caddy is live).
     - `s` – Restart Caddy through the helper when the status probe reports the service is down.
     - `d` – Show the unified diff between the DB-rendered config and `/etc/caddy/Caddyfile` (available once an import path exists). The diff is shown inside a Rich panel and can be copied directly from the terminal scrollback.
-    - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions plus the `pip install --upgrade caddy-tui` command.
+    - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions with both `pip install --upgrade caddy-tui` and `pipx upgrade caddy-tui` so you can follow the workflow you originally used.
     - `q` – Quit the session.
 
 Every action prints the exact helper command when elevated access is required, so you can copy/paste or add it to sudoers immediately.

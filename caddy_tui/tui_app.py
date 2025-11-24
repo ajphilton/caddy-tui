@@ -267,9 +267,18 @@ class TerminalMenuApp:
         if not info.update_available or not info.latest:
             self._set_message(f"Already running the latest version ({info.current}).", style="green")
             return
-        install_cmd = "pip install --upgrade caddy-tui"
+        pip_cmd = "pip install --upgrade caddy-tui"
+        pipx_cmd = "pipx upgrade caddy-tui"
+        instructions = (
+            f"Current version: {info.current}\n"
+            f"Latest release: {info.latest}\n\n"
+            "Upgrade with either command:\n"
+            f"  {pip_cmd}\n"
+            f"  {pipx_cmd}\n"
+            "(use pipx if you installed via pipx)"
+        )
         panel = Panel(
-            f"Current version: {info.current}\nLatest release: {info.latest}\n\nUpgrade with:\n  {install_cmd}",
+            instructions,
             title="Update available",
             border_style="yellow",
         )
