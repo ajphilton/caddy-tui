@@ -111,11 +111,13 @@ Set `CADDY_TUI_ADMIN_ENDPOINT` (defaults to `http://127.0.0.1:2019/config`) if y
     - `f` – Write the privileged Caddyfile back into `caddy-tui` (helper-assisted import so sudo can mirror `/etc/caddy/Caddyfile`).
     - `t` – Write the current `caddy-tui` snapshot over the system Caddyfile (helper-assisted install when write permissions are missing).
     - `r` – Refresh the live snapshot (polls the Caddy admin API for content first, falling back to the helper mirror only when the API is unavailable).
+    - `p` – Print the live Caddyfile exactly as Caddy is serving it. The TUI refreshes the live snapshot, renders every block, and shows the full text inside a scrollable Rich panel so you can copy/paste or audit directives without leaving the menu.
     - `b` – Show the block contents for each snapshot side-by-side (caddy-tui, Caddyfile, and live) in a dedicated table with wrapped text so you can visually compare directives.
     - `n` / `e` / `x` – Add, edit, or delete blocks inside the caddy-tui snapshot. The TUI opens your `$EDITOR` (or nano/vi fallback), validates the single-block snippet, and persists it back to SQLite so `caddy-tui tui` is the one-stop shop for CRUD.
     - `c` – Reload Caddy through the helper and automatically queue a live snapshot refresh afterwards (shown when the helper reports Caddy is live).
     - `s` – Restart Caddy through the helper when the status probe reports the service is down.
     - `d` – Show the unified diff between the DB-rendered config and `/etc/caddy/Caddyfile` (available once an import path exists). The diff is shown inside a Rich panel and can be copied directly from the terminal scrollback.
+    - `h` – Show an in-app CLI reference table listing every `caddy-tui` command, its usage string, and a concise description so you can jump into automation or remind yourself of available flags without leaving the interface.
     - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions with both `pip install --upgrade caddy-tui` and `pipx upgrade caddy-tui` so you can follow the workflow you originally used.
     - `q` – Quit the session.
 

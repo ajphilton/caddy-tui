@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import shlex
 import shutil
@@ -166,6 +167,8 @@ class TerminalMenuApp:
             MenuOption("t", "Write caddy-tui ➜ Caddyfile", self._write_tui_over_caddyfile),
             MenuOption("r", "Refresh live snapshot", self._refresh_live_snapshot),
             MenuOption("b", "Show snapshot blocks", self._show_snapshot_blocks),
+            MenuOption("p", "Print live Caddyfile", self._print_live_caddyfile),
+            MenuOption("h", "List CLI commands", self._show_cli_commands),
         ]
         version_info = self._version_info
         if version_info and version_info.update_available and version_info.latest:
@@ -441,6 +444,30 @@ class TerminalMenuApp:
         else:
             self._set_message("Live snapshot refresh failed: no data returned.", style="red")
 
+    def _print_live_caddyfile(self) -> None:
+        status = refresh_live_snapshot(live_caddyfile=LIVE_CADDYFILE)
+        self._latest_status = status
+        live_snapshot = next((snap for snap in status.snapshots if snap.kind == SNAPSHOT_KIND_CADDY_LIVE), None)
+        snapshot_text = self._live_snapshot_caddyfile_text(status)
+        source_hint = live_snapshot.source_path if live_snapshot and live_snapshot.source_path else None
+        if snapshot_text:
+            title = "Live Caddyfile"
+            if source_hint:
+                title = f"{title} ({source_hint})"
+            panel = Panel(snapshot_text, title=title, border_style="cyan")
+            self._set_renderable(panel, persist=False)
+            return
+
+        fallback_text, error = self._read_live_caddyfile_from_disk()
+        if fallback_text:
+            title = f"Live Caddyfile ({LIVE_CADDYFILE})" if LIVE_CADDYFILE else "Live Caddyfile"
+            panel = Panel(fallback_text, title=title, border_style="cyan")
+            self._set_renderable(panel, persist=False)
+            return
+
+        hint = error or (live_snapshot.error if live_snapshot else "snapshot unavailable")
+        self._set_message(f"Unable to load live Caddyfile: {hint}", style="red")
+
     def _reload_caddy(self) -> None:
         success, command, error = reload_caddy_service(None)
         if not success:
@@ -539,6 +566,51 @@ class TerminalMenuApp:
                 table.add_row(*cells)
 
         self._set_renderable(table, persist=False)
+
+    def _show_cli_commands(self) -> None:
+        try:
+            import click  # type: ignore
+        except ImportError as exc:  # pragma: no cover - click is required at runtime
+            self._set_message(f"CLI metadata unavailable: {exc}", style="red")
+            return
+
+        try:
+            cli_module = importlib.import_module("caddy_tui.cli")
+        except Exception as exc:  # pragma: no cover - import errors surface to UI
+            self._set_message(f"Failed to load CLI definitions: {exc}", style="red")
+            return
+
+        main = getattr(cli_module, "main", None)
+        if not isinstance(getattr(main, "commands", None), dict):
+            self._set_message("CLI definitions missing.", style="red")
+            return
+
+        root_ctx = click.Context(main)
+        table = Table(title="CLI Commands", show_lines=True, expand=True)
+        table.add_column("Command", style="bold cyan", width=18)
+        table.add_column("Usage", overflow="fold")
+        table.add_column("Description", overflow="fold")
+
+        for name in sorted(main.commands.keys()):
+            command = main.commands[name]
+            cmd_ctx = click.Context(command, parent=root_ctx)
+            usage_line = command.get_usage(cmd_ctx).strip()
+            usage_formatted = self._format_cli_usage(usage_line, name)
+            description = command.help or command.short_help or command.get_short_help_str() or "—"
+            table.add_row(f"caddy-tui {name}", usage_formatted, description)
+
+        self._set_renderable(table, persist=False)
+
+    @staticmethod
+    def _format_cli_usage(raw_usage: str, command_name: str) -> str:
+        if not raw_usage:
+            return f"caddy-tui {command_name}"
+        first_line = raw_usage.splitlines()[0]
+        if first_line.lower().startswith("usage:"):
+            first_line = first_line[6:].strip()
+        if first_line.startswith("main"):
+            first_line = "caddy-tui" + first_line[len("main") :]
+        return first_line.strip()
 
     def _add_caddy_tui_block(self) -> None:
         result = self._load_blocks_for_editor(require_existing=False)
@@ -779,6 +851,30 @@ class TerminalMenuApp:
 
         leftovers = [entry[0] for entry in available]
         return matches, leftovers
+
+    def _live_snapshot_caddyfile_text(self, status: AppStatus | None) -> str | None:
+        if status is None or not status.db_ready:
+            return None
+        blocks = load_snapshot_block_texts(status.db_path, SNAPSHOT_KIND_CADDY_LIVE)
+        if not blocks:
+            return None
+        ordered = sorted(blocks, key=lambda block: block.block_index)
+        joined = "\n\n".join(block.text.strip() or block.text for block in ordered if block.text)
+        return joined.strip() or None
+
+    def _read_live_caddyfile_from_disk(self) -> tuple[str | None, str | None]:
+        if not LIVE_CADDYFILE:
+            return None, "LIVE_CADDYFILE path not configured"
+        path = LIVE_CADDYFILE
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None, f"{path} not found"
+        except PermissionError as exc:
+            return None, f"Permission denied reading {path}: {exc}"
+        except OSError as exc:
+            return None, f"Unable to read {path}: {exc}"
+        return text, None
 
     @staticmethod
     def _block_tokens(block: SnapshotBlockText | None) -> set[str]:
