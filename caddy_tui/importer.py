@@ -82,6 +82,20 @@ class CaddyfilePermissionError(PermissionError):
 
 
 def find_caddyfile(explicit: Path | None = None) -> Path:
+    """Locate a Caddyfile to import.
+
+    If an explicit path is provided, search nearby locations for a matching
+    Caddyfile. Otherwise fall back to the default search paths.
+
+    Args:
+        explicit: Optional path hint to search from.
+
+    Returns:
+        Path to the discovered Caddyfile.
+
+    Raises:
+        FileNotFoundError: When no Caddyfile can be located.
+    """
     if explicit:
         resolved = _resolve_explicit_path(explicit)
         if resolved:
@@ -112,6 +126,26 @@ def import_caddyfile(
     mirror_to: Sequence[models.SnapshotKind] | None = None,
     db_path: Path | None = None,
 ) -> ImportSummary:
+    """Import a Caddyfile into the database.
+
+    Parses the Caddyfile, validates it with the caddy binary, and stores
+    the configuration blocks in the SQLite database.
+
+    Args:
+        path: Path to the Caddyfile. If None, searches default locations.
+        helper_interactive: Whether to prompt for elevated access when needed.
+        target_snapshot: The snapshot type to write to (default: caddy_tui).
+        mirror_to: Additional snapshot types to mirror the import to.
+        db_path: Optional database path override.
+
+    Returns:
+        ImportSummary with import statistics.
+
+    Raises:
+        FileNotFoundError: When no Caddyfile is found.
+        CaddyfilePermissionError: When the file cannot be read.
+        ValueError: When the Caddyfile contains no server blocks.
+    """
     source = find_caddyfile(path)
     adapted_source = _ensure_accessible_source(source, helper_interactive=helper_interactive)
     adapt_caddyfile(adapted_source)  # validation only
@@ -162,6 +196,26 @@ def import_caddyfile_text(
     db_path: Path | None = None,
     require_config: bool = False,
 ) -> ImportSummary | None:
+    """Import Caddyfile content from a text string.
+
+    Useful when importing from the Caddy admin API or other sources
+    where the content is already available as a string.
+
+    Args:
+        text: The Caddyfile content to import.
+        source_label: Label to identify the source of this import.
+        target_snapshot: The snapshot type to write to.
+        mirror_to: Additional snapshot types to mirror the import to.
+        db_path: Optional database path override.
+        require_config: If True, raise an error if no config exists.
+
+    Returns:
+        ImportSummary with import statistics.
+
+    Raises:
+        ValueError: When the text contains no server blocks.
+        RuntimeError: When require_config is True and no config exists.
+    """
     parsed = parse_caddyfile_text(text)
     if not parsed.blocks:
         raise ValueError("No server blocks detected in Caddyfile text")
@@ -203,6 +257,26 @@ def import_caddy_json_payload(
     db_path: Path | None = None,
     require_config: bool = False,
 ) -> ImportSummary | None:
+    """Import Caddy configuration from a JSON payload.
+
+    Used primarily for importing from the Caddy admin API which returns
+    configuration in JSON format.
+
+    Args:
+        payload: The JSON payload as a string or dict.
+        source_label: Label to identify the source of this import.
+        target_snapshot: The snapshot type to write to (default: caddy_live).
+        mirror_to: Additional snapshot types to mirror the import to.
+        db_path: Optional database path override.
+        require_config: If True, raise an error if no config exists.
+
+    Returns:
+        ImportSummary with import statistics.
+
+    Raises:
+        RuntimeError: When require_config is True and no config exists.
+        json.JSONDecodeError: When payload is a string with invalid JSON.
+    """
     data = json.loads(payload) if isinstance(payload, str) else payload
     blocks = blocks_from_caddy_json(data)
     normalised_text = json.dumps(data, sort_keys=True)
