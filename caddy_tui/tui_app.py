@@ -29,7 +29,7 @@ from .importer import CaddyfilePermissionError, import_caddyfile
 from .models import SNAPSHOT_KIND_CADDYFILE, SNAPSHOT_KIND_CADDY_LIVE, SNAPSHOT_KIND_CADDY_TUI
 from .snapshots import SNAPSHOT_LABELS, SnapshotBlockText, SnapshotComparison, load_snapshot_block_texts
 from .status import AppStatus, ServiceStatus, SnapshotInfo, collect_app_status, refresh_live_snapshot
-from .versioning import VersionInfo, collect_version_info
+from .versioning import VersionInfo, collect_version_info, get_upgrade_instructions
 
 
 @dataclass(slots=True)
@@ -270,15 +270,12 @@ class TerminalMenuApp:
         if not info.update_available or not info.latest:
             self._set_message(f"Already running the latest version ({info.current}).", style="green")
             return
-        pip_cmd = "pip install --upgrade caddy-tui"
-        pipx_cmd = "pipx upgrade caddy-tui"
+        upgrade_instructions = get_upgrade_instructions()
         instructions = (
             f"Current version: {info.current}\n"
             f"Latest release: {info.latest}\n\n"
-            "Upgrade with either command:\n"
-            f"  {pip_cmd}\n"
-            f"  {pipx_cmd}\n"
-            "(use pipx if you installed via pipx)"
+            f"Upgrade with:\n"
+            f"  {upgrade_instructions}"
         )
         panel = Panel(
             instructions,

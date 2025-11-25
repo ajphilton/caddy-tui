@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import sysconfig
 import urllib.request
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 
 from packaging.version import InvalidVersion, Version
 
@@ -16,6 +18,8 @@ from .db import session_scope
 from . import models
 
 DEFAULT_REPO = "ajphilton/caddy-tui"
+
+InstallMethod = Literal["pipx", "venv", "system"]
 
 
 @dataclass(slots=True)
@@ -70,3 +74,92 @@ def store_current_version(version: str | None = None, db_path: Path | str | None
             meta.value = value
         else:
             session.add(models.Meta(key="app_version", value=value))
+
+
+def detect_install_method() -> InstallMethod:
+    """Detect how caddy-tui was installed to provide appropriate upgrade instructions.
+    
+    Returns:
+        "pipx" if installed via pipx (executable path contains 'pipx')
+        "venv" if running in a virtual environment
+        "system" if installed in system Python (may be externally managed)
+    """
+    exe = sys.executable
+    
+    # Check if running in a pipx environment
+    if "pipx" in exe.lower():
+        return "pipx"
+    
+    # Check if in a virtual environment
+    in_venv = hasattr(sys, "real_prefix") or (
+        hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
+    )
+    if in_venv:
+        return "venv"
+    
+    return "system"
+
+
+def is_externally_managed() -> bool:
+    """Check if the Python environment is externally managed (PEP 668).
+    
+    Modern Linux distributions mark system Python as externally managed
+    to prevent package conflicts. In such environments, pip install
+    will fail without --break-system-packages.
+    """
+    stdlib = sysconfig.get_path("stdlib")
+    if stdlib:
+        marker_path = Path(stdlib) / "EXTERNALLY-MANAGED"
+        return marker_path.exists()
+    return False
+
+
+def get_upgrade_command() -> str:
+    """Get the appropriate upgrade command based on installation method."""
+    method = detect_install_method()
+    if method == "pipx":
+        return "pipx upgrade caddy-tui"
+    elif method == "venv":
+        return "pip install --upgrade caddy-tui"
+    else:
+        # System Python - check if externally managed
+        if is_externally_managed():
+            return "pipx upgrade caddy-tui"
+        return "pip install --upgrade caddy-tui"
+
+
+def get_upgrade_instructions() -> str:
+    """Get detailed upgrade instructions based on installation method.
+    
+    Returns a formatted string with upgrade command(s) and helpful notes.
+    """
+    method = detect_install_method()
+    
+    if method == "pipx":
+        return (
+            "pipx upgrade caddy-tui\n\n"
+            "(detected pipx installation)"
+        )
+    
+    if method == "venv":
+        return (
+            "pip install --upgrade caddy-tui\n\n"
+            "(detected virtual environment)"
+        )
+    
+    # System Python installation
+    if is_externally_managed():
+        return (
+            "pipx upgrade caddy-tui\n\n"
+            "Your system Python is externally managed (PEP 668).\n"
+            "If you installed with pipx, the command above will work.\n"
+            "If you haven't installed pipx yet:\n"
+            "  sudo apt install pipx && pipx install caddy-tui"
+        )
+    
+    return (
+        "pip install --upgrade caddy-tui\n"
+        "  — or —\n"
+        "pipx upgrade caddy-tui\n\n"
+        "(use pipx if you installed via pipx)"
+    )
