@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2025-11-25
+- Version bump to recover from failed 0.2.4 release (PyPI already had 0.2.3 artifacts when v0.2.4 tag was pushed)
+
+## [0.2.4] - 2025-11-25
+- Improved upgrade dialogue and flow
+
 ## [0.2.3] - 2025-11-25
 - Fixed failing test `test_load_snapshot_block_texts_returns_content` which incorrectly expected route_payloads to be populated without caddy binary or json_route fragments.
 - Added comprehensive docstrings to public functions in `importer.py` and `exporter.py` (`find_caddyfile`, `import_caddyfile`, `import_caddyfile_text`, `import_caddy_json_payload`, `render_caddyfile_text`, `generate_caddyfile`).
