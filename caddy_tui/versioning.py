@@ -80,14 +80,19 @@ def detect_install_method() -> InstallMethod:
     """Detect how caddy-tui was installed to provide appropriate upgrade instructions.
     
     Returns:
-        "pipx" if installed via pipx (executable path contains 'pipx')
+        "pipx" if installed via pipx (executable in pipx venvs directory)
         "venv" if running in a virtual environment
         "system" if installed in system Python (may be externally managed)
     """
     exe = sys.executable
     
-    # Check if running in a pipx environment
-    if "pipx" in exe.lower():
+    # Check if running in a pipx environment by looking for pipx venvs structure
+    # pipx creates venvs in paths like ~/.local/pipx/venvs/<package>/
+    # or in $PIPX_HOME/venvs/<package>/
+    pipx_home = os.environ.get("PIPX_HOME", "")
+    if pipx_home and exe.startswith(pipx_home):
+        return "pipx"
+    if "/pipx/venvs/" in exe or "\\pipx\\venvs\\" in exe:
         return "pipx"
     
     # Check if in a virtual environment

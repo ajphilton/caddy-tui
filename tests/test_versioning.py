@@ -1,3 +1,5 @@
+import os
+
 from caddy_tui import versioning
 
 
@@ -26,13 +28,21 @@ def test_collect_version_info_handles_missing_remote(mocker):
     assert info.update_available is False
 
 
-def test_detect_install_method_pipx(mocker):
+def test_detect_install_method_pipx_via_path(mocker):
     mocker.patch("caddy_tui.versioning.sys.executable", "/home/user/.local/pipx/venvs/caddy-tui/bin/python")
+    mocker.patch.dict(os.environ, {"PIPX_HOME": ""}, clear=False)
+    assert versioning.detect_install_method() == "pipx"
+
+
+def test_detect_install_method_pipx_via_env(mocker):
+    mocker.patch("caddy_tui.versioning.sys.executable", "/opt/pipx/venvs/caddy-tui/bin/python")
+    mocker.patch.dict(os.environ, {"PIPX_HOME": "/opt/pipx"}, clear=False)
     assert versioning.detect_install_method() == "pipx"
 
 
 def test_detect_install_method_venv(mocker):
     mocker.patch("caddy_tui.versioning.sys.executable", "/home/user/project/.venv/bin/python")
+    mocker.patch.dict(os.environ, {"PIPX_HOME": ""}, clear=False)
     mocker.patch.object(versioning.sys, "prefix", "/home/user/project/.venv")
     mocker.patch.object(versioning.sys, "base_prefix", "/usr")
     assert versioning.detect_install_method() == "venv"
@@ -40,6 +50,7 @@ def test_detect_install_method_venv(mocker):
 
 def test_detect_install_method_system(mocker):
     mocker.patch("caddy_tui.versioning.sys.executable", "/usr/bin/python3")
+    mocker.patch.dict(os.environ, {"PIPX_HOME": ""}, clear=False)
     mocker.patch.object(versioning.sys, "prefix", "/usr")
     mocker.patch.object(versioning.sys, "base_prefix", "/usr")
     assert versioning.detect_install_method() == "system"
