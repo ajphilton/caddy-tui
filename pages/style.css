@@ -1,23 +1,64 @@
 /* Basic style for caddy-tui pages site */
-body {
-    font-family: system-ui, sans-serif;
-    background: #f9f9f6;
-    color: #222;
-    margin: 0;
-    padding: 0;
-}
-
-h1,
-h2,
-h3 {
+h1, h2, h3 {
+h1, h2, h3 {
     color: #2a4d69;
 }
-
 .container {
     max-width: 800px;
     margin: 2rem auto;
     padding: 2rem;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Code blocks and inline code (GitHub style) */
+pre, code {
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+    background: #f6f8fa;
+    color: #24292f;
+    border-radius: 6px;
+}
+pre {
+    padding: 1em;
+    margin: 1em 0;
+    overflow-x: auto;
+    font-size: 0.95em;
+    border: 1px solid #e1e4e8;
+}
+code {
+    padding: 0.2em 0.4em;
+    font-size: 0.95em;
+    border: 1px solid #e1e4e8;
+}
+
+/* Markdown tables (core commands) */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+    background: #fff;
+}
+th, td {
+    border: 1px solid #e1e4e8;
+    padding: 0.5em 0.75em;
+    text-align: left;
+    font-size: 0.97em;
+}
+th {
+    background: #f6f8fa;
+    font-weight: 600;
+}
+
+/* Project structure block */
+.project-structure-block {
+    background: #f6f8fa;
+    border-radius: 6px;
+    border: 1px solid #e1e4e8;
+    padding: 1em;
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+    font-size: 0.97em;
+    margin: 1em 0;
+    white-space: pre;
+    overflow-x: auto;
 }
