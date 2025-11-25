@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: caddy-tui
-Version: 0.2.2
+Version: 0.2.3
 Summary: TUI + CLI tool to manage Caddy configs via SQLite
 Author-email: Alexander Hilton <alexander@skystamper.com>
 License: MIT License
