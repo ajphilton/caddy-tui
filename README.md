@@ -163,17 +163,21 @@ Run privileged steps (import/apply/status) with sudo, but keep the interactive m
 
 ## Publishing to PyPI
 
-1. Update `CHANGELOG.md`, `README.md`, and bump the version in `pyproject.toml`.
-2. Build artifacts using the bundled metadata (the manifest already ships README + license):
+CI now handles almost everything:
 
-    ```bash
-    python -m build
-    ```
+1. Update docs/changelog and bump `pyproject.toml` + `caddy_tui/__init__.py`.
+2. Commit to `main` and push. The `build` job runs plus `publish-to-testpypi`, so TestPyPI always mirrors `main`.
+3. Tag the release (`git tag v0.2.2 && git push origin v0.2.2`). GitHub pauses the `publish-to-pypi` job until the `pypi` environment is approved; once approved, PyPI receives the artifacts.
 
-3. Upload via [Twine](https://twine.readthedocs.io/):
+Local uploads are still possible when you need to hotfix outside CI:
 
-    ```bash
-    twine upload dist/*
-    ```
+```bash
+python -m build
+twine upload dist/*
+```
 
-The repo now ships `.github/workflows/publish.yml`, so every push to `main` builds and ships to TestPyPI, and tagged pushes (after manual approval in the `pypi` environment) publish to PyPI via Trusted Publishing. Local `twine upload` is only needed when you want to dry-run or hotfix outside CI. The published wheel exposes the `caddy-tui` and `caddy-tui-helper` entry points, includes the CLI skeleton plus all starter modules, and makes the database builder/import-export hooks available for downstream automation.
+The wheel exposes both CLI entry points (`caddy-tui`, `caddy-tui-helper`) and ships all helper modules for downstream automation.
+
+## Wishlist
+
+- **CLI deep dive for AI assistants** – expand the Click command surface (status filters, automation-friendly outputs, helper diagnostics) so Copilot/Codex-style agents can treat `caddy-tui` as a powerful scripting target. Document each addition in the changelog to keep the roadmap transparent.

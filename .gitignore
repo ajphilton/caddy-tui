@@ -9,3 +9,4 @@ __pycache__/
 pytest_cache/
 env/.env.pypi
 env/.env.pypi.enc
+dev-notes/
