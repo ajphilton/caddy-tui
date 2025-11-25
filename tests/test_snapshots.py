@@ -91,9 +91,7 @@ def test_load_snapshot_block_texts_returns_content(tmp_path: Path):
     assert blocks[0].locations == ()
     assert blocks[0].dials == ()
     assert blocks[0].status_codes == ()
-    # route_payloads requires caddy binary to adapt caddyfile or json_route fragments
-    # Since _seed_snapshot doesn't provide json_route fragments and caddy is not available,
-    # route_payloads should be empty
+    # route_payloads empty without caddy binary or json_route fragments
     assert blocks[0].route_payloads == ()
 
 
