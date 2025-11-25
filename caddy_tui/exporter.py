@@ -21,6 +21,19 @@ def render_caddyfile_text(
     *,
     snapshot_kind: models.SnapshotKind = models.SNAPSHOT_KIND_CADDY_TUI,
 ) -> str:
+    """Render a Caddyfile from the database snapshot as text.
+
+    Reconstructs the Caddyfile content from stored server blocks,
+    preserving original formatting where possible.
+
+    Args:
+        db_path: Optional database path override.
+        snapshot_kind: Which snapshot type to render from.
+
+    Returns:
+        The rendered Caddyfile content as a string.
+        Returns empty string if no config or snapshot exists.
+    """
     with session_scope(db_path=db_path) as session:
         config = session.scalar(select(models.Config).where(models.Config.name == DEFAULT_CONFIG_NAME))
         if config is None:
@@ -62,6 +75,22 @@ def generate_caddyfile(
     *,
     snapshot_kind: models.SnapshotKind = models.SNAPSHOT_KIND_CADDY_TUI,
 ) -> Path:
+    """Generate a Caddyfile from the database and write it to disk.
+
+    Renders the snapshot to text and writes it to the target path.
+    Falls back to using the privileged helper when direct write fails.
+
+    Args:
+        target: Path to write the generated Caddyfile to.
+        db_path: Optional database path override.
+        snapshot_kind: Which snapshot type to generate from.
+
+    Returns:
+        The path where the file was written.
+
+    Raises:
+        PermissionError: When the file cannot be written and helper fails.
+    """
     data = render_caddyfile_text(db_path=db_path, snapshot_kind=snapshot_kind)
     try:
         target.write_text(data)

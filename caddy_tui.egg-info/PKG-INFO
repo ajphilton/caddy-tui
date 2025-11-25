@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: caddy-tui
-Version: 0.2.0
+Version: 0.2.3
 Summary: TUI + CLI tool to manage Caddy configs via SQLite
 Author-email: Alexander Hilton <alexander@skystamper.com>
 License: MIT License
@@ -84,6 +84,22 @@ sudo caddy-tui import --caddyfile /etc/caddy/Caddyfile
 caddy-tui tui                 # Interactive block editor + drift monitor
 ```
 
+### Install from PyPI
+
+You can install the published package directly (recommended inside a virtualenv):
+
+```bash
+pip install --upgrade caddy-tui
+```
+
+Need a globally available CLI without touching the system Python? Use [pipx](https://pypa.github.io/pipx/):
+
+```bash
+pipx install caddy-tui
+```
+
+This installs both `caddy-tui` and the optional `caddy-tui-helper` command. If you want the helper to run via sudo without a password, follow the “Privileged helper” section below to add it to `/etc/sudoers.d/caddy-tui`.
+
 The CLI prints JSON so it can slot straight into scripts, CI jobs, or other automation.
 
 ## Core commands
@@ -146,12 +162,14 @@ Set `CADDY_TUI_ADMIN_ENDPOINT` (defaults to `http://127.0.0.1:2019/config`) if y
     - `f` – Write the privileged Caddyfile back into `caddy-tui` (helper-assisted import so sudo can mirror `/etc/caddy/Caddyfile`).
     - `t` – Write the current `caddy-tui` snapshot over the system Caddyfile (helper-assisted install when write permissions are missing).
     - `r` – Refresh the live snapshot (polls the Caddy admin API for content first, falling back to the helper mirror only when the API is unavailable).
+    - `p` – Print the live Caddyfile exactly as Caddy is serving it. The TUI refreshes the live snapshot, renders every block, and shows the full text inside a scrollable Rich panel so you can copy/paste or audit directives without leaving the menu.
     - `b` – Show the block contents for each snapshot side-by-side (caddy-tui, Caddyfile, and live) in a dedicated table with wrapped text so you can visually compare directives.
     - `n` / `e` / `x` – Add, edit, or delete blocks inside the caddy-tui snapshot. The TUI opens your `$EDITOR` (or nano/vi fallback), validates the single-block snippet, and persists it back to SQLite so `caddy-tui tui` is the one-stop shop for CRUD.
     - `c` – Reload Caddy through the helper and automatically queue a live snapshot refresh afterwards (shown when the helper reports Caddy is live).
     - `s` – Restart Caddy through the helper when the status probe reports the service is down.
     - `d` – Show the unified diff between the DB-rendered config and `/etc/caddy/Caddyfile` (available once an import path exists). The diff is shown inside a Rich panel and can be copied directly from the terminal scrollback.
-    - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions plus the `pip install --upgrade caddy-tui` command.
+    - `h` – Show an in-app CLI reference table listing every `caddy-tui` command, its usage string, and a concise description so you can jump into automation or remind yourself of available flags without leaving the interface.
+    - `u` – When GitHub publishes a newer release, this option appears and prints upgrade instructions with both `pip install --upgrade caddy-tui` and `pipx upgrade caddy-tui` so you can follow the workflow you originally used.
     - `q` – Quit the session.
 
 Every action prints the exact helper command when elevated access is required, so you can copy/paste or add it to sudoers immediately.
@@ -196,17 +214,21 @@ Run privileged steps (import/apply/status) with sudo, but keep the interactive m
 
 ## Publishing to PyPI
 
-1. Update `CHANGELOG.md`, `README.md`, and bump the version in `pyproject.toml`.
-2. Build artifacts using the bundled metadata (the manifest already ships README + license):
+CI now handles almost everything:
 
-    ```bash
-    python -m build
-    ```
+1. Update docs/changelog and bump `pyproject.toml` + `caddy_tui/__init__.py`.
+2. Commit to `main` and push. The `build` job runs plus `publish-to-testpypi`, so TestPyPI always mirrors `main`.
+3. Tag the release (`git tag v0.2.2 && git push origin v0.2.2`). GitHub pauses the `publish-to-pypi` job until the `pypi` environment is approved; once approved, PyPI receives the artifacts.
 
-3. Upload via [Twine](https://twine.readthedocs.io/):
+Local uploads are still possible when you need to hotfix outside CI:
 
-    ```bash
-    twine upload dist/*
-    ```
+```bash
+python -m build
+twine upload dist/*
+```
 
-The published wheel exposes the `caddy-tui` and `caddy-tui-helper` entry points, includes the CLI skeleton plus all starter modules, and makes the database builder/import-export hooks available for downstream automation.
+The wheel exposes both CLI entry points (`caddy-tui`, `caddy-tui-helper`) and ships all helper modules for downstream automation.
+
+## Wishlist
+
+- **CLI deep dive for AI assistants** – expand the Click command surface (status filters, automation-friendly outputs, helper diagnostics) so Copilot/Codex-style agents can treat `caddy-tui` as a powerful scripting target. Document each addition in the changelog to keep the roadmap transparent.

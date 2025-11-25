@@ -91,7 +91,8 @@ def test_load_snapshot_block_texts_returns_content(tmp_path: Path):
     assert blocks[0].locations == ()
     assert blocks[0].dials == ()
     assert blocks[0].status_codes == ()
-    assert len(blocks[0].route_payloads) == 1
+    # route_payloads empty without caddy binary or json_route fragments
+    assert blocks[0].route_payloads == ()
 
 
 def test_load_snapshot_block_texts_handles_missing_snapshot(tmp_path: Path):
