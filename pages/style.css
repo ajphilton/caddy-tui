@@ -1,0 +1,23 @@
+/* Basic style for caddy-tui pages site */
+body {
+    font-family: system-ui, sans-serif;
+    background: #f9f9f6;
+    color: #222;
+    margin: 0;
+    padding: 0;
+}
+
+h1,
+h2,
+h3 {
+    color: #2a4d69;
+}
+
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
