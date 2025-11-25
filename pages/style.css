@@ -1,40 +1,62 @@
 .body {
-    font-family: system-ui, sans-serif;
-    background: #f9f9f6;
-    color: #222;
+    font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #f7f8fa;
+    color: #222e3a;
     margin: 0;
     padding: 0;
 }
 h1, h2, h3 {
-    color: #2a4d69;
+    color: #2456a6;
+    font-family: 'Merriweather', 'Georgia', serif;
+    font-weight: 700;
+}
+a {
+    color: #2456a6;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
 }
 .container {
     max-width: 800px;
     margin: 2rem auto;
     padding: 2rem;
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(36,86,166,0.07);
 }
 
-/* Code blocks and inline code (GitHub style) */
+/* Code blocks and inline code (GitHub style, improved) */
 pre, code {
     font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
-    background: #f6f8fa;
-    color: #24292f;
+    background: #f3f4f7;
+    color: #1a2330;
     border-radius: 6px;
 }
 pre {
-    padding: 1em;
-    margin: 1em 0;
+    padding: 0.9em 1em;
+    margin: 1.1em 0;
     overflow-x: auto;
-    font-size: 0.95em;
+    font-size: 0.97em;
     border: 1px solid #e1e4e8;
+    line-height: 1.6;
 }
 code {
-    padding: 0.2em 0.4em;
-    font-size: 0.95em;
+    padding: 0.15em 0.35em;
+    font-size: 0.97em;
     border: 1px solid #e1e4e8;
+    margin: 0 0.1em;
+    line-height: 1.3;
+    background: #eef0f4;
+    box-sizing: border-box;
+}
+pre code {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    font-size: inherit;
+    line-height: inherit;
 }
 
 /* Markdown tables (core commands) */
@@ -43,21 +65,23 @@ table {
     width: 100%;
     margin: 1em 0;
     background: #fff;
+    font-size: 0.97em;
 }
 th, td {
     border: 1px solid #e1e4e8;
     padding: 0.5em 0.75em;
     text-align: left;
-    font-size: 0.97em;
+    vertical-align: top;
 }
 th {
-    background: #f6f8fa;
+    background: #f3f4f7;
     font-weight: 600;
+    color: #2456a6;
 }
 
 /* Project structure block */
 .project-structure-block {
-    background: #f6f8fa;
+    background: #f3f4f7;
     border-radius: 6px;
     border: 1px solid #e1e4e8;
     padding: 1em;
@@ -66,4 +90,5 @@ th {
     margin: 1em 0;
     white-space: pre;
     overflow-x: auto;
+    color: #1a2330;
 }
