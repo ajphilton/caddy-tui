@@ -3,11 +3,12 @@ import markdown
 from pathlib import Path
 import re
 
-# Paths
-meta_path = Path("META.md")
-readme_path = Path("../README.md")
-index_path = Path("index.html")
-output_path = Path("index.html")
+
+# Paths (relative to repo root)
+meta_path = Path("pages/META.md")
+readme_path = Path("README.md")
+index_path = Path("pages/index.html")
+output_path = Path("pages/index.html")
 
 # Read META.md and README.md
 meta_md = meta_path.read_text() if meta_path.exists() else ""
