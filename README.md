@@ -176,4 +176,4 @@ Run privileged steps (import/apply/status) with sudo, but keep the interactive m
     twine upload dist/*
     ```
 
-The published wheel exposes the `caddy-tui` and `caddy-tui-helper` entry points, includes the CLI skeleton plus all starter modules, and makes the database builder/import-export hooks available for downstream automation.
+The repo now ships `.github/workflows/publish.yml`, so every push to `main` builds and ships to TestPyPI, and tagged pushes (after manual approval in the `pypi` environment) publish to PyPI via Trusted Publishing. Local `twine upload` is only needed when you want to dry-run or hotfix outside CI. The published wheel exposes the `caddy-tui` and `caddy-tui-helper` entry points, includes the CLI skeleton plus all starter modules, and makes the database builder/import-export hooks available for downstream automation.
