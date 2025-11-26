@@ -6,6 +6,10 @@ on:
       - main
     tags:
       - 'v*'
+    paths-ignore:
+      - 'pages/**'
+      - '.github/workflows/pages.yaml'
+      - 'docs/**'
 
 jobs:
   build:
