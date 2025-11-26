@@ -42,19 +42,18 @@ if readme_md:
 
 
 # Extract meta tags, schema.org, and Open Graph from META.md
-meta_tags = []
-schema_org = []
 open_graph = []
+schema_org_match = re.search(r'(<script\s+type="application/ld\+json">[\s\S]*?</script>)', meta_md)
+schema_org_html = schema_org_match.group(1) if schema_org_match else ""
+
 for line in meta_md.splitlines():
-    if line.strip().startswith('<meta '):
-        meta_tags.append(line.strip())
-    elif line.strip().startswith('<script '):
-        schema_org.append(line.strip())
-    elif line.strip().startswith('<meta property="og:'):
+    if line.strip().startswith('<meta property="og:'):
         open_graph.append(line.strip())
 
 # Compose meta head HTML
-meta_head_html = '\n'.join(meta_tags + schema_org + open_graph)
+meta_head_html = '\n'.join(open_graph)
+if schema_org_html:
+    meta_head_html = meta_head_html + '\n' + schema_org_html if meta_head_html else schema_org_html
 
 
 # Convert markdown to HTML for README sections
